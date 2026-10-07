@@ -1,0 +1,15 @@
+# Core (always installable - quant + models + API)
+typing-extensions>=4.12
+
+# Streaming layer (Redpanda / Kafka via librdkafka)
+confluent-kafka>=2.5,<3
+
+# Agentic mesh (LangGraph state machine)
+langgraph>=0.2,<0.3
+langchain-core>=0.3,<0.4
+
+# Dev / test
+pytest>=8.3
+pytest-asyncio>=0.23
+mypy>=1.11
+ruff>=0.6

@@ -1,0 +1,13 @@
+FROM python:3.11-slim
+WORKDIR /app
+COPY pyproject.toml README.md ./
+COPY dcm_engine ./dcm_engine
+COPY data ./data
+RUN pip install --no-cache-dir -e ".[streaming,agents]" \
+    && pip install --no-cache-dir fastapi "uvicorn[standard]" \
+    && python -m dcm_engine.ml.train data/sample_deals.csv \
+       --features velocity_per_min,ordered_mm,target_mm,fast_money_share,anchor_share,hours_open \
+       --target demand_mm --label tightened
+ENV DCM_PORT=8000 PYTHONUNBUFFERED=1
+EXPOSE 8000
+CMD ["python", "-m", "dcm_engine.bridge.app"]

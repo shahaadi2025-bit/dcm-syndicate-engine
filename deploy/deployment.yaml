@@ -1,0 +1,184 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dcm-book-builder
+  labels:
+    app.kubernetes.io/name: dcm-book-builder
+    app.kubernetes.io/component: streaming
+    app.kubernetes.io/part-of: dcm-syndicate-engine
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dcm-book-builder
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dcm-book-builder
+        app.kubernetes.io/component: streaming
+      annotations:
+        # Force rollout on config change (hash injected below by kustomize/helm in prod).
+        dcm.engine/config-checksum: "manual"
+    spec:
+      # -------- Security context: hardened pod -------------------------
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: dcm-engine
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: dcm-book-builder
+      containers:
+        - name: book-builder
+          image: ghcr.io/your-org/dcm-book-builder:1.0.0   # pinned digest in prod
+          imagePullPolicy: IfNotPresent
+          args: ["python", "-m", "dcm_engine.pipeline.consumer"]
+          ports:
+            - name: http-metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: KAFKA_BOOTSTRAP
+              valueFrom:
+                configMapKeyRef:
+                  name: dcm-engine-config
+                  key: kafka_bootstrap
+            - name: KAFKA_GROUP_ID
+              value: dcm-book-builder
+            - name: DCM_LLM_PROVIDER
+              value: "rule"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "1Gi"
+          # -------- Container hardening ---------------------------------
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          # -------- Probes: liveness != readiness -----------------------
+          livenessProbe:
+            tcpSocket:
+              port: http-metrics
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: http-metrics
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          lifecycle:
+            preStop:
+              exec:
+                # Drain consumer group gracefully before SIGKILL.
+                command: ["sleep", "10"]
+      terminationGracePeriodSeconds: 45
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+# ---------------- Agent mesh deployment (LangGraph) --------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dcm-agent-mesh
+  labels:
+    app.kubernetes.io/name: dcm-agent-mesh
+    app.kubernetes.io/component: agents
+    app.kubernetes.io/part-of: dcm-syndicate-engine
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dcm-agent-mesh
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dcm-agent-mesh
+        app.kubernetes.io/component: agents
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent-mesh
+          image: ghcr.io/your-org/dcm-agent-mesh:1.0.0
+          args: ["python", "-m", "dcm_engine.agents.service"]
+          env:
+            - name: KAFKA_BOOTSTRAP
+              valueFrom:
+                configMapKeyRef:
+                  name: dcm-engine-config
+                  key: kafka_bootstrap
+            - name: DCM_LLM_PROVIDER
+              value: "langchain"
+            - name: DCM_LLM_MODEL
+              value: "gpt-4o-mini"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: dcm-model-credentials
+                  key: openai_api_key
+          resources:
+            requests:
+              cpu: "1"
+              memory: "1Gi"
+            limits:
+              cpu: "4"
+              memory: "4Gi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+---
+# ---------------- NetworkPolicy: default-deny east-west ----------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dcm-default-deny
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: dcm-syndicate-engine
+  policyTypes: ["Ingress", "Egress"]
+  ingress: []
+  egress:
+    # Allow DNS + Kafka only.
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redpanda
+      ports:
+        - protocol: TCP
+          port: 9092

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DCM Syndicate Command Center</title>
+<style>
+  :root {
+    --bg: #07090f; --panel: #0d1220; --panel2: #111827; --line: #1e293b;
+    --text: #e2e8f0; --muted: #7d8aa3; --cyan: #22d3ee; --green: #34d399;
+    --amber: #fbbf24; --red: #f87171; --violet: #a78bfa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: radial-gradient(1200px 700px at 70% -10%, #101a33 0%, var(--bg) 60%);
+    color: var(--text); font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    min-height: 100vh; padding: 24px;
+  }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, #22d3ee, #6366f1);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; color: #04121a;
+    box-shadow: 0 0 24px rgba(34,211,238,.35);
+  }
+  h1 { font-size: 20px; font-weight: 700; letter-spacing: .4px; }
+  .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .live { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-size: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  .grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 16px; }
+  .card {
+    background: linear-gradient(180deg, var(--panel), var(--panel2));
+    border: 1px solid var(--line); border-radius: 16px; padding: 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.35);
+  }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.6px; color: var(--muted); margin-bottom: 12px; font-weight: 700; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: linear-gradient(180deg, var(--panel), var(--panel2)); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .kpi .label { font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
+  .kpi .value { font-size: 26px; font-weight: 800; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .kpi .delta { font-size: 11px; margin-top: 4px; }
+  .up { color: var(--green); } .down { color: var(--red); } .flat { color: var(--amber); }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  th { text-align: left; color: var(--muted); font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 8px; border-bottom: 1px solid rgba(30,41,59,.5); }
+  tr.fade-in { animation: rowIn .5s ease; }
+  @keyframes rowIn { from { background: rgba(34,211,238,.12); } to { background: transparent; } }
+  .tag { padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .5px; }
+  .tag.rm { background: rgba(52,211,153,.12); color: var(--green); }
+  .tag.hf { background: rgba(248,113,113,.12); color: var(--red); }
+  .tag.cb { background: rgba(167,139,250,.12); color: var(--violet); }
+  .tag.ins { background: rgba(34,211,238,.12); color: var(--cyan); }
+  .tag.bt { background: rgba(251,191,36,.12); color: var(--amber); }
+  .bar-wrap { position: relative; height: 6px; background: #0a0f1c; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+  .bar { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #22d3ee, #6366f1); border-radius: 4px; transition: width .6s ease; }
+  .agents { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 4px; }
+  .agent { background: #0a0f1c; border: 1px solid var(--line); border-radius: 12px; padding: 12px; position: relative; overflow: hidden; }
+  .agent::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: .7; }
+  .agent .name { font-size: 12px; font-weight: 700; }
+  .agent .status { font-size: 10.5px; color: var(--muted); margin-top: 4px; min-height: 28px; }
+  .agent .conf { margin-top: 8px; font-size: 11px; color: var(--accent); font-weight: 700; }
+  .a-mi { --accent: #22d3ee; } .a-df { --accent: #a78bfa; } .a-br { --accent: #fbbf24; }
+  .rec {
+    margin-top: 16px; border: 1px solid rgba(52,211,153,.35); border-radius: 14px;
+    background: linear-gradient(135deg, rgba(52,211,153,.08), rgba(34,211,238,.05));
+    padding: 16px; display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .rec .price { font-size: 30px; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; }
+  .rec .meta { font-size: 11.5px; color: var(--muted); }
+  .btn {
+    border: none; padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 12px;
+    cursor: pointer; letter-spacing: .6px; color: #04121a; background: linear-gradient(135deg, #34d399, #22d3ee);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(52,211,153,.3); }
+  .ladder-box { display: flex; gap: 14px; }
+  .ladder { flex: 1; }
+  .rung { display: grid; grid-template-columns: 64px 1fr 70px; gap: 8px; align-items: center; padding: 5px 0; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .rung .lvl { color: var(--muted); }
+  .rung-bar { height: 10px; border-radius: 5px; background: linear-gradient(90deg, #22d3ee55, #6366f1aa); }
+  .svg-wrap { width: 100%; }
+  .legend { display: flex; gap: 14px; font-size: 10.5px; color: var(--muted); margin-top: 8px; }
+  .legend span::before { content: "●"; margin-right: 5px; }
+  .l-rm::before { color: var(--green); } .l-hf::before { color: var(--red); }
+  .l-cb::before { color: var(--violet); } .l-ins::before { color: var(--cyan); }
+  .footer { margin-top: 18px; color: var(--muted); font-size: 11px; text-align: center; }
+  @media (max-width: 980px) { .grid, .kpis, .agents { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <div class="logo">DCM</div>
+      <div>
+        <h1>DCM Syndicate Command Center</h1>
+        <div class="sub">Autonomous Sovereign &amp; Corporate Debt · Bookbuilding &amp; Pricing Engine · v1.0</div>
+      </div>
+    </div>
+    <div class="live"><span class="dot"></span> <span id="feed-label">SIM FEED</span> · <span id="clock">--:--:--</span> UTC</div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="label">Oversubscription</div><div class="value" id="kpi-osr">0.00×</div><div class="delta flat" id="kpi-osr-d">building…</div></div>
+    <div class="kpi"><div class="label">Book Size</div><div class="value" id="kpi-book">$0mm</div><div class="delta up" id="kpi-book-d">+$0mm</div></div>
+    <div class="kpi"><div class="label">Velocity</div><div class="value" id="kpi-vel">0</div><div class="delta flat">orders / min</div></div>
+    <div class="kpi"><div class="label">Guidance</div><div class="value" id="kpi-spr">115 bps</div><div class="delta flat" id="kpi-spr-d">initial price talk</div></div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <h2>Live Order Book — Institutional IOIs</h2>
+        <table>
+          <thead><tr><th>Investor</th><th>Type</th><th>Size</th><th>Limit Yld</th><th style="width:32%">Book Weight</th></tr></thead>
+          <tbody id="book-body"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Agent Mesh — Cross-Check Status</h2>
+        <div class="agents">
+          <div class="agent a-mi"><div class="name">Market Intelligence</div><div class="status" id="st-mi">Listening to secondary spreads…</div><div class="conf" id="cf-mi"></div></div>
+          <div class="agent a-df"><div class="name">Demand Forecaster</div><div class="status" id="st-df">Waiting for book snapshot…</div><div class="conf" id="cf-df"></div></div>
+          <div class="agent a-br"><div class="name">Syndicate Bookrunner</div><div class="status" id="st-br">Risk overlay armed…</div><div class="conf" id="cf-br"></div></div>
+        </div>
+        <div class="rec">
+          <div>
+            <div class="meta" style="font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted)">Recommended Reoffer Spread</div>
+            <div class="price" id="rec-spread">— bps</div>
+            <div class="meta" id="rec-meta">agents converging…</div>
+          </div>
+          <button class="btn" id="approve-btn">Approve &amp; Publish</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <h2>Demand Curve Forecast (ML)</h2>
+        <div class="svg-wrap" id="curve-wrap"></div>
+        <div class="legend"><span class="l-rm">Real money</span><span class="l-hf">Hedge funds</span><span class="l-cb">Central banks</span><span class="l-ins">Insurance</span></div>
+      </div>
+      <div class="card">
+        <h2>Book Coverage Ladder</h2>
+        <div class="ladder-box">
+          <div class="ladder" id="ladder"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Simulated institutional data · deterministic agent mesh · human bookrunner approval required before any level goes to market</div>
+
+<script>
+(() => {
+  "use strict";
+  const LIVE = location.protocol.startsWith("http") && location.port !== "" && location.port !== "5500";
+  // ---------------- Deterministic PRNG (reproducible session) ----------
+  let s = 42;
+  const rnd = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const gauss = (mu, sig) => mu + sig * Math.sqrt(-2 * Math.log(rnd() + 1e-9)) * Math.cos(2 * Math.PI * rnd());
+
+  // ---------------- Domain constants ----------------------------------
+  const TARGET = 1000;                       // $mm
+  const TYPES = [
+    { id: "REAL_MONEY", tag: "rm", label: "REAL MONEY", weight: 1.15 },
+    { id: "HEDGE_FUND", tag: "hf", label: "HEDGE FUND", weight: 0.70 },
+    { id: "CENTRAL_BANK", tag: "cb", label: "CENTRAL BANK", weight: 1.25 },
+    { id: "INSURANCE", tag: "ins", label: "INSURANCE", weight: 1.05 },
+    { id: "BANK_TREASURY", tag: "bt", label: "BANK TREASURY", weight: 0.90 },
+  ];
+  const NAMES = ["PIMCO", "BlackRock", "Norges", "Allianz", "Millennium", "Citadel", "JPM Treasury", "BAML IM", "TPG Angelo", "Legal & General", "ADIA", "PGGM"];
+  const STICKY = { REAL_MONEY: 1.15, INSURANCE: 1.05, CENTRAL_BANK: 1.25, BANK_TREASURY: 0.90, HEDGE_FUND: 0.70 };
+
+  // ---------------- State ---------------------------------------------
+  const book = new Map();                    // investor -> {size, type, limit}
+  let velocity = 0, spread = 115, guidance = 115, benchmark = 0.0265;
+  let history = [], osr = 0, approved = false;
+
+  // ---------------- Quant helpers (mirror Python core) -----------------
+  const matrixDelta = (r) =>
+    r < 0.75 ? 15 : r < 1 ? 8 : r < 2 ? 0 : r < 3 ? -6 : r < 5 ? -12 : -18;
+  const priceFromYield = (y, c, n) => {
+    const i = y / 2, m = Math.round(n * 2);
+    const df = Math.pow(1 + i, -m);
+    return (c / 2) * 100 * (1 - df) / i + 100 * df;
+  };
+
+  // ---------------- IOI generator --------------------------------------
+  function nextIOI() {
+    const t = TYPES[Math.floor(rnd() * TYPES.length)];
+    const name = NAMES[Math.floor(rnd() * NAMES.length)] + " " + String.fromCharCode(65 + Math.floor(rnd() * 6));
+    const skill = t.weight >= 1.05 ? 0.8 : 0.3;
+    const limit = Math.max(0.02, spread / 10000 + benchmark + gauss(0, 0.0003) - skill * 0.0002);
+    const size = [5, 10, 15, 25, 50, 75, 100][Math.floor(rnd() * 7)];
+    const prev = book.get(name) || { size: 0, type: t, limit: 9 };
+    book.set(name, { size: prev.size + size, type: t, limit: Math.min(prev.limit, limit) });
+    return { name, size, type: t, limit };
+  }
+
+  // ---------------- Book rendering -------------------------------------
+  const bookBody = document.getElementById("book-body");
+  function renderBook() {
+    const rows = [...book.entries()].sort((a, b) => b[1].size - a[1].size).slice(0, 9);
+    const total = rows.reduce((a, [, v]) => a + v.size, 0) || 1;
+    bookBody.innerHTML = rows.map(([name, v]) => {
+      const pct = Math.min(100, v.size / total * 100 * 2.2);
+      return `<tr class="fade-in">
+        <td><b>${name}</b></td>
+        <td><span class="tag ${v.type.tag}">${v.type.label}</span></td>
+        <td>$${v.size}mm</td>
+        <td>${(v.limit * 100).toFixed(3)}%</td>
+        <td><div class="bar-wrap"><div class="bar" style="width:${pct}%"></div></div></td>
+      </tr>`;
+    }).join("");
+  }
+
+  // ---------------- Demand curve SVG -----------------------------------
+  function renderCurve(forecast) {
+    const W = 460, H = 220, pad = 40;
+    const maxD = Math.max(...forecast.curve.map(p => p.mm), TARGET * 1.2);
+    const x = (spr) => pad + (spr - 60) / (160 - 60) * (W - pad - 12);
+    const y = (mm) => H - pad - mm / maxD * (H - pad - 16);
+    let grid = "", areaPath = "", linePath = "";
+    forecast.curve.forEach((p, i) => {
+      const px = x(p.spr), py = y(p.mm);
+      linePath += (i ? "L" : "M") + px.toFixed(1) + " " + py.toFixed(1);
+      if (i === 0) areaPath = "M" + px.toFixed(1) + " " + (H - pad);
+      areaPath += " L" + px.toFixed(1) + " " + py.toFixed(1);
+    });
+    areaPath += ` L${x(forecast.curve[forecast.curve.length - 1].spr).toFixed(1)} ${H - pad} Z`;
+    [0, .25, .5, .75, 1].forEach(f => {
+      const gy = y(maxD * f);
+      grid += `<line x1="${pad}" y1="${gy}" x2="${W - 12}" y2="${gy}" stroke="#1e293b" stroke-dasharray="3 4"/>
+               <text x="${pad - 6}" y="${gy + 3}" fill="#7d8aa3" font-size="9" text-anchor="end">${Math.round(maxD * f)}</text>`;
+    });
+    [60, 85, 110, 135, 160].forEach(sp => {
+      grid += `<text x="${x(sp)}" y="${H - pad + 14}" fill="#7d8aa3" font-size="9" text-anchor="middle">${sp}bps</text>`;
+    });
+    const targetY = y(TARGET);
+    const pointX = x(forecast.clearing_spread), pointY = y(forecast.demand_mm);
+    document.getElementById("curve-wrap").innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%">
+        ${grid}
+        <path d="${areaPath}" fill="url(#g1)" opacity=".35"/>
+        <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#22d3ee" stop-opacity=".5"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/>
+        </linearGradient></defs>
+        <path d="${linePath}" fill="none" stroke="#22d3ee" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="${pad}" y1="${targetY}" x2="${W - 12}" y2="${targetY}" stroke="#fbbf24" stroke-dasharray="6 4" opacity=".8"/>
+        <text x="${W - 14}" y="${targetY - 6}" fill="#fbbf24" font-size="9" text-anchor="end">TARGET ${TARGET}mm</text>
+        <circle cx="${pointX}" cy="${pointY}" r="5.5" fill="#34d399" stroke="#04121a" stroke-width="2"/>
+        <text x="${pointX + 10}" y="${pointY - 10}" fill="#34d399" font-size="10" font-weight="700">clearing ≈ ${forecast.clearing_spread.toFixed(0)}bps</text>
+        <text x="${pad}" y="16" fill="#7d8aa3" font-size="9">Model: ${forecast.source} · window ${(Math.random() * 0).toFixed(0)}${forecast.window}s</text>
+      </svg>`;
+  }
+
+  // ---------------- Coverage ladder ------------------------------------
+  function renderLadder(forecast) {
+    const el = document.getElementById("ladder");
+    const rows = [
+      { lvl: "5×", v: 5000 }, { lvl: "3×", v: 3000 }, { lvl: "2×", v: 2000 },
+      { lvl: "1×", v: 1000 }, { lvl: "0.75×", v: 750 },
+    ];
+    const mx = 5000;
+    el.innerHTML = rows.map(r => `
+      <div class="rung">
+        <div class="lvl">${r.lvl} · $${r.v.toLocaleString()}mm</div>
+        <div><div class="rung-bar" style="width:${r.v / mx * 100}%; opacity:${r.v / mx * .9 + .1}"></div></div>
+        <div style="color:${osr * 1000 >= r.v ? "#34d399" : "#475569"}; font-weight:700; text-align:right">
+          ${osr * 1000 >= r.v ? "CLEARED" : "—"}
+        </div>
+      </div>`).join("");
+  }
+
+  // ---------------- Agent mesh simulation -------------------------------
+  function agentsTick(forecast) {
+    const mi = document.getElementById("st-mi"), df = document.getElementById("st-df"), br = document.getElementById("st-br");
+    const cmi = document.getElementById("cf-mi"), cdf = document.getElementById("cf-df"), cbr = document.getElementById("cf-br");
+    const fair = guidance + matrixDelta(osr) * 0.6 - 6 + gauss(0, 1.2);
+    mi.textContent = `${(3 + Math.floor(rnd() * 5))} comps clustered ${fair > guidance ? "wide" : "through"} of talk · macro dovish`;
+    cmi.textContent = `fair ${fair.toFixed(1)} bps · 94% conf`;
+    df.textContent = `net-of-churn demand $${Math.round(forecast.demand_mm)}mm · churn ${(forecast.churn * 100).toFixed(0)}%`;
+    cdf.textContent = `velocity ${velocity}/min · ${forecast.source}`;
+    const challenges = forecast.demand_mm < TARGET * 0.9 ? 1 : 0;
+    br.textContent = challenges
+      ? "⚠ net demand below 90% of target — left-tail flagged, one revision round"
+      : "warehouse within limits · left-tail contained · approve";
+    cbr.textContent = challenges ? "challenge open" : `OSR ${osr.toFixed(2)}× · conf 95%`;
+  }
+
+  // ---------------- KPIs -------------------------------------------------
+  function renderKpis(total, delta) {
+    document.getElementById("kpi-osr").textContent = osr.toFixed(2) + "×";
+    const d = document.getElementById("kpi-osr-d");
+    d.textContent = osr >= 3 ? "stampede" : osr >= 2 ? "healthy" : osr >= 1 ? "covered" : "building…";
+    d.className = "delta " + (osr >= 2 ? "up" : osr >= 1 ? "flat" : "down");
+    document.getElementById("kpi-book").textContent = "$" + Math.round(total).toLocaleString() + "mm";
+    const bd = document.getElementById("kpi-book-d");
+    bd.textContent = "+" + delta.toFixed(0) + "mm last tick";
+    document.getElementById("kpi-vel").textContent = Math.round(velocity);
+    document.getElementById("kpi-spr").textContent = spread.toFixed(1) + " bps";
+    const sd = document.getElementById("kpi-spr-d");
+    const diff = spread - guidance;
+    sd.textContent = (diff > 0.5 ? "▲ " : diff < -0.5 ? "▼ " : "◆ ") + Math.abs(diff).toFixed(1) + " bps vs talk";
+    sd.className = "delta " + (diff < -0.5 ? "up" : diff > 0.5 ? "down" : "flat");
+  }
+
+  // ---------------- Engine loop ------------------------------------------
+  const forecastWindow = () => 30 + Math.floor(rnd() * 30);
+  function computeForecast() {
+    let sticky = 0, fast = 0, total = 0;
+    book.forEach(v => { total += v.size; if (v.type.weight >= 1.0) sticky += v.size * STICKY[v.type.id]; else fast += v.size; });
+    if (total === 0) total = 1;
+    const churn = Math.min(1, fast / total);
+    const demand = Math.max(total * (1 - churn * 0.35) + velocity * 60 * 0.35, 120);
+    const osrF = demand / TARGET;
+    const clearing = guidance + matrixDelta(osrF);
+    const curve = [];
+    for (let sp = 60; sp <= 160; sp += 5) {
+      const r = 1000 / (1 + Math.exp(-(sp - clearing) / 9)) * Math.min(osrF, 3) / Math.max(osrF, 0.9) + (sp > clearing ? 300 : 60);
+      curve.push({ spr: sp, mm: Math.round(Math.min(r, maxDemandCap())) });
+    }
+    return { demand_mm: demand, clearing_spread: clearing, churn, source: velocity > 60 ? "ridge v2.1" : "ridge v2.1 + heuristic blend", window: forecastWindow(), curve };
+  }
+  function maxDemandCap() { return Math.max(1200, osr * TARGET * 1.35); }
+
+  let tickN = 0;
+  let lastServerTotal = null;
+  function applyServerPayload(d) {
+    // Merge a payload from the FastAPI bridge (/api/book or /ws) into UI state.
+    book.clear();
+    (d.book || []).forEach(v => {
+      const t = TYPES.find(x => x.id === v.investor_type) || TYPES[0];
+      book.set(v.investor_id, { size: v.size_mm, type: t, limit: v.limit_yield });
+    });
+    const total = d.ordered_mm || 0;
+    velocity = d.velocity_per_min || 0;
+    osr = d.osr || (d.target_mm ? total / d.target_mm : 0);
+    const rec = d.recommendation;
+    if (rec) {
+      spread = rec.final_spread_bps;
+      document.getElementById("rec-spread").textContent = spread.toFixed(1) + " bps";
+      document.getElementById("rec-meta").textContent =
+        `yield ${rec.final_yield.toFixed(4)} · price ${rec.final_price ?? "—"} · conf ${rec.confidence}`;
+    }
+    const f = computeForecast();
+    history.push({ total, osr, spread, demand: f.demand_mm });
+    renderBook(); renderCurve(f); renderLadder(f); agentsTick(f);
+    renderKpis(total, lastServerTotal === null ? 0 : total - lastServerTotal);
+    lastServerTotal = total;
+  }
+  function tick() {
+    tickN++;
+    const n = 1 + Math.floor(rnd() * 3);
+    let delta = 0;
+    for (let i = 0; i < n; i++) { nextIOI(); delta += 0; }
+    const ioi = [...book.values()];
+    const total = ioi.reduce((a, v) => a + v.size, 0);
+    delta = Math.round(total - (history.at(-1)?.total ?? 0));
+    osr = total / TARGET;
+    velocity = Math.max(4, Math.min(140, velocity * 0.7 + n * 45 * (0.7 + rnd() * 0.6)));
+    if (tickN % 2 === 0) {
+      const f = computeForecast();
+      spread = spread * 0.82 + f.clearing_spread * 0.18;
+      history.push({ total, osr, spread, demand: f.demand_mm });
+      renderBook(); renderCurve(f); renderLadder(f); agentsTick(f); renderKpis(total, delta);
+      document.getElementById("rec-spread").textContent = spread.toFixed(1) + " bps";
+      document.getElementById("rec-meta").textContent =
+        `yield ${(benchmark + spread / 10000).toFixed(4)} · price ${priceFromYield(benchmark + spread / 10000, 0.0475, 10).toFixed(3)} · conf ${(0.9 + rnd() * 0.09).toFixed(2)}`;
+    }
+  }
+
+  document.getElementById("approve-btn").addEventListener("click", function () {
+    if (approved) return;
+    approved = true;
+    this.textContent = "✓ PUBLISHED " + spread.toFixed(1) + " bps";
+    this.style.background = "linear-gradient(135deg,#1e293b,#334155)";
+    this.style.color = "#34d399";
+    alert(`Reoffer spread ${spread.toFixed(1)} bps published to the street.\nYield ${(benchmark + spread / 10000).toFixed(4)}% · Price ${priceFromYield(benchmark + spread / 10000, 0.0475, 10).toFixed(3)}`);
+  });
+
+  setInterval(() => {
+    document.getElementById("clock").textContent = new Date().toISOString().slice(11, 19);
+  }, 1000);
+
+  // ---------------- Live server mode (FastAPI bridge) -------------------
+  if (LIVE) {
+    document.getElementById("feed-label").textContent = "SERVER FEED";
+    function connectWS() {
+      const proto = location.protocol === "https:" ? "wss://" : "ws://";
+      const ws = new WebSocket(proto + location.host + "/ws");
+      ws.onmessage = (ev) => { try { applyServerPayload(JSON.parse(ev.data)); } catch (e) {} };
+      ws.onclose = () => { document.getElementById("feed-label").textContent = "SIM (server down)"; setTimeout(connectWS, 2000); };
+      ws.onerror = () => ws.close();
+    }
+    connectWS();
+  } else {
+    setInterval(tick, 1600);
+    tick();
+  }
+})();
+</script>
+</body>
+</html>

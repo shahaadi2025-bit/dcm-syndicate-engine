@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SYNDIQUA — Autonomous DCM Syndicate Pricing & Bookbuilding Engine</title>
+<meta name="description" content="Multi-agent AI that prices sovereign & corporate bond deals in real time. Institutional bookbuilding, ML demand forecasting, deterministic audit trails." />
+<style>
+  :root {
+    --bg: #050810; --bg2: #0a1120; --panel: #0d1526; --line: #1e293b;
+    --text: #e8edf7; --muted: #8b99b5; --cyan: #22d3ee; --indigo: #6366f1;
+    --green: #34d399; --gold: #fbbf24; --violet: #a78bfa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--text); overflow-x: hidden;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  ::selection { background: rgba(34,211,238,.3); }
+
+  /* ---------- Backdrop FX ---------- */
+  .stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .stars i {
+    position: absolute; width: 2px; height: 2px; border-radius: 50%;
+    background: #ffffff; opacity: .35; animation: twinkle 4s infinite ease-in-out;
+  }
+  @keyframes twinkle { 0%,100% { opacity: .1; } 50% { opacity: .55; } }
+  .aurora {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(900px 500px at 15% -5%, rgba(99,102,241,.18), transparent 60%),
+      radial-gradient(800px 500px at 85% 10%, rgba(34,211,238,.12), transparent 60%),
+      radial-gradient(700px 600px at 50% 110%, rgba(167,139,250,.10), transparent 60%);
+    animation: drift 18s ease-in-out infinite alternate;
+  }
+  @keyframes drift { to { transform: translateY(-30px) scale(1.04); } }
+
+  .wrap { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- Nav ---------- */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    backdrop-filter: blur(14px); background: rgba(5,8,16,.72);
+    border-bottom: 1px solid rgba(30,41,59,.6);
+  }
+  .nav-in { max-width: 1180px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: 2px; font-size: 17px; }
+  .brand .glyph {
+    width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center;
+    background: conic-gradient(from 210deg, #22d3ee, #6366f1, #a78bfa, #22d3ee);
+    color: #04121a; background-clip: padding-box;
+    box-shadow: 0 0 22px rgba(99,102,241,.45);
+  }
+  .nav-links { display: flex; gap: 26px; font-size: 13.5px; color: var(--muted); }
+  .nav-links a { color: var(--muted); text-decoration: none; transition: color .2s; }
+  .nav-links a:hover { color: var(--cyan); }
+  .nav-cta {
+    padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 700; text-decoration: none;
+    color: #04121a; background: linear-gradient(135deg, #34d399, #22d3ee);
+    box-shadow: 0 4px 18px rgba(52,211,153,.25); transition: transform .2s, box-shadow .2s;
+  }
+  .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 26px rgba(52,211,153,.4); }
+  @media (max-width: 780px) { .nav-links { display: none; } }
+
+  /* ---------- Hero ---------- */
+  .hero { position: relative; padding: 170px 0 90px; text-align: center; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px;
+    border: 1px solid rgba(34,211,238,.35); background: rgba(34,211,238,.07);
+    color: var(--cyan); font-size: 12px; letter-spacing: 2.5px; font-weight: 700;
+    margin-bottom: 28px; animation: floatIn .9s ease both;
+  }
+  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+  h1 {
+    font-size: clamp(42px, 7vw, 84px); line-height: 1.03; letter-spacing: -1.5px; font-weight: 800;
+    animation: floatIn 1s .1s ease both;
+  }
+  h1 .grad {
+    background: linear-gradient(100deg, #22d3ee 5%, #818cf8 40%, #34d399 75%, #22d3ee 100%);
+    background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: shimmer 7s linear infinite;
+  }
+  @keyframes shimmer { to { background-position: 200% center; } }
+  .hero p.lead {
+    max-width: 720px; margin: 26px auto 0; color: var(--muted); font-size: 17.5px; line-height: 1.65;
+    animation: floatIn 1s .25s ease both;
+  }
+  .hero-ctas { display: flex; gap: 16px; justify-content: center; margin-top: 40px; animation: floatIn 1s .4s ease both; flex-wrap: wrap; }
+  .btn-primary, .btn-ghost {
+    padding: 15px 30px; border-radius: 13px; font-size: 15px; font-weight: 700; text-decoration: none;
+    transition: transform .2s, box-shadow .2s, background .2s;
+  }
+  .btn-primary { color: #04121a; background: linear-gradient(135deg, #34d399, #22d3ee); box-shadow: 0 8px 30px rgba(52,211,153,.35); }
+  .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 14px 42px rgba(52,211,153,.5); }
+  .btn-ghost { color: var(--text); border: 1px solid var(--line); background: rgba(13,21,38,.6); }
+  .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); transform: translateY(-3px); }
+  @keyframes floatIn { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Floating bond glyphs ---------- */
+  .orb {
+    position: absolute; border-radius: 50%; pointer-events: none; opacity: .5;
+    background: radial-gradient(circle at 30% 30%, rgba(34,211,238,.5), rgba(99,102,241,.08) 60%, transparent);
+    filter: blur(1px); animation: bob 9s ease-in-out infinite;
+  }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-26px) rotate(8deg); } }
+
+  /* ---------- Marquee ---------- */
+  .marquee-zone { position: relative; padding: 26px 0 10px; overflow: hidden; border-block: 1px solid rgba(30,41,59,.5); background: rgba(8,12,24,.5); }
+  .marquee { display: flex; gap: 60px; white-space: nowrap; animation: slide 30s linear infinite; width: max-content; }
+  .marquee span { font-size: 13px; letter-spacing: 2.2px; color: var(--muted); font-weight: 600; }
+  .marquee b { color: var(--cyan); font-weight: 800; }
+  @keyframes slide { to { transform: translateX(-50%); } }
+
+  /* ---------- Sections ---------- */
+  section { padding: 90px 0; }
+  .sec-head { text-align: center; margin-bottom: 56px; }
+  .sec-head .kicker { color: var(--cyan); font-size: 12px; letter-spacing: 3px; font-weight: 800; margin-bottom: 14px; }
+  .sec-head h2 { font-size: clamp(28px, 4vw, 44px); letter-spacing: -0.6px; }
+  .sec-head p { color: var(--muted); max-width: 640px; margin: 14px auto 0; font-size: 15.5px; line-height: 1.7; }
+  .reveal { opacity: 0; transform: translateY(30px); transition: opacity .8s ease, transform .8s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ---------- Pipeline diagram cards ---------- */
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: stretch; }
+  .fnode {
+    position: relative; background: linear-gradient(180deg, var(--panel), #0a101e);
+    border: 1px solid var(--line); border-radius: 16px; padding: 22px 18px; overflow: hidden;
+    animation: floatIn .7s ease both; transition: transform .25s, border-color .25s;
+  }
+  .fnode:hover { transform: translateY(-6px); border-color: rgba(34,211,238,.5); }
+  .fnode .icon { font-size: 27px; margin-bottom: 12px; }
+  .fnode h3 { font-size: 15px; margin-bottom: 7px; }
+  .fnode p { color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+  .fnode .pulse-line {
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent, #22d3ee), transparent);
+    opacity: .65;
+  }
+  .fnode::after {
+    content: "→"; position: absolute; right: -13px; top: 45%; color: #334155; font-size: 24px; z-index: 2;
+  }
+  .fnode:last-child::after { content: ""; }
+  @media (max-width: 900px) { .flow { grid-template-columns: 1fr 1fr; } .fnode::after { content: ""; } }
+
+  /* ---------- Agent mesh visual ---------- */
+  .mesh-zone { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: center; }
+  @media (max-width: 940px) { .mesh-zone { grid-template-columns: 1fr; } }
+  .mesh-stage { position: relative; height: 430px; }
+  .ring {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    border: 1px dashed rgba(99,102,241,.35); border-radius: 50%;
+  }
+  .ring.r1 { width: 190px; height: 190px; }
+  .ring.r2 { width: 320px; height: 320px; animation: spin 28s linear infinite; }
+  .ring.r3 { width: 430px; height: 430px; animation: spin 45s linear infinite reverse; }
+  @keyframes spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+  .core {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; text-align: center;
+    background: radial-gradient(circle at 32% 28%, #1b2a4d, #0a1120 70%);
+    border: 1px solid rgba(34,211,238,.4); box-shadow: 0 0 60px rgba(34,211,238,.18);
+  }
+  .core .t { font-size: 13px; font-weight: 800; letter-spacing: 1.5px; }
+  .core .s { font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .agent-node {
+    position: absolute; left: 50%; top: 50%; width: 158px; margin-left: -79px;
+    background: rgba(13,21,38,.92); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 15px; backdrop-filter: blur(6px); box-shadow: 0 14px 40px rgba(0,0,0,.4);
+    transition: transform .3s, border-color .3s;
+  }
+  .agent-node:hover { border-color: var(--accent); transform: scale(1.05); }
+  .agent-node .nm { font-weight: 800; font-size: 13.5px; }
+  .agent-node .rl { color: var(--muted); font-size: 11px; margin-top: 5px; line-height: 1.55; }
+  .agent-node .bar { height: 4px; border-radius: 3px; margin-top: 9px; background: linear-gradient(90deg, var(--accent), transparent); }
+  .an1 { --accent: #22d3ee; transform: translate(74px, -176px); }
+  .an2 { --accent: #a78bfa; transform: translate(-236px, 6px); }
+  .an3 { --accent: #fbbf24; transform: translate(104px, 128px); }
+  .ping {
+    position: absolute; width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 14px var(--accent); animation: ping 2.6s infinite;
+  }
+  @keyframes ping { 0% { opacity: .9; transform: scale(1);} 80%,100% { opacity: 0; transform: scale(2.4);} }
+
+  .mesh-copy ul { list-style: none; display: grid; gap: 18px; margin-top: 8px; }
+  .mesh-copy li {
+    background: rgba(13,21,38,.55); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px;
+    display: flex; gap: 14px; align-items: flex-start; transition: border-color .25s, transform .25s;
+  }
+  .mesh-copy li:hover { border-color: rgba(34,211,238,.4); transform: translateX(6px); }
+  .mesh-copy .ic { font-size: 22px; margin-top: 2px; }
+  .mesh-copy b { display: block; margin-bottom: 4px; font-size: 14.5px; }
+  .mesh-copy span { color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+  /* ---------- Metrics band ---------- */
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .metric {
+    text-align: center; padding: 30px 16px; border-radius: 16px;
+    background: linear-gradient(180deg, var(--panel), #0a101e); border: 1px solid var(--line);
+  }
+  .metric .n { font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .metric .n.grad2 {
+    background: linear-gradient(100deg, #34d399, #22d3ee); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .metric .l { color: var(--muted); font-size: 11.5px; letter-spacing: 1.8px; margin-top: 8px; text-transform: uppercase; }
+  @media (max-width: 800px) { .metrics { grid-template-columns: 1fr 1fr; } }
+
+  /* ---------- ML section ---------- */
+  .ml-zone { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+  @media (max-width: 940px) { .ml-zone { grid-template-columns: 1fr; } }
+  .chart-card {
+    background: linear-gradient(180deg, var(--panel), #0a101e); border: 1px solid var(--line);
+    border-radius: 18px; padding: 22px;
+  }
+  .eq { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12.5px; color: var(--cyan); background: #050910; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-top: 16px; overflow-x: auto; white-space: pre; }
+  .pill-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  .pill { padding: 7px 14px; border-radius: 999px; font-size: 11.5px; font-weight: 700; border: 1px solid var(--line); color: var(--muted); }
+  .pill.on { border-color: rgba(52,211,153,.5); color: var(--green); background: rgba(52,211,153,.07); }
+
+  /* ---------- Security ---------- */
+  .sec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .sec-card { background: linear-gradient(180deg, var(--panel), #0a101e); border: 1px solid var(--line); border-radius: 16px; padding: 24px; transition: border-color .25s, transform .25s; }
+  .sec-card:hover { border-color: rgba(52,211,153,.45); transform: translateY(-5px); }
+  .sec-card .ic { font-size: 24px; margin-bottom: 12px; }
+  .sec-card b { font-size: 14.5px; display: block; margin-bottom: 6px; }
+  .sec-card span { color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+  @media (max-width: 900px) { .sec-grid { grid-template-columns: 1fr; } }
+
+  /* ---------- CTA ---------- */
+  .cta {
+    text-align: center; padding: 70px 30px; border-radius: 24px; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, rgba(34,211,238,.10), rgba(99,102,241,.12) 50%, rgba(52,211,153,.10));
+    border: 1px solid rgba(99,102,241,.35);
+  }
+  .cta h2 { font-size: clamp(26px, 4vw, 42px); letter-spacing: -0.6px; }
+  .cta p { color: var(--muted); margin: 14px auto 30px; max-width: 560px; }
+
+  footer { padding: 40px 0 60px; text-align: center; color: var(--muted); font-size: 12.5px; }
+  footer a { color: var(--cyan); text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="aurora"></div>
+  <div class="stars" id="stars"></div>
+
+  <nav>
+    <div class="nav-in">
+      <div class="brand"><div class="glyph">◈</div> SYNDIQUA</div>
+      <div class="nav-links">
+        <a href="#how">How it works</a><a href="#agents">Agent mesh</a>
+        <a href="#ml">ML models</a><a href="#security">Security</a>
+      </div>
+      <a class="nav-cta" href="dashboard.html">Launch Terminal →</a>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <!-- ============ HERO ============ -->
+    <header class="hero">
+      <div class="orb" style="width:230px;height:230px;top:120px;left:-70px;"></div>
+      <div class="orb" style="width:150px;height:150px;top:40px;right:6%;animation-delay:-3s;"></div>
+      <div class="orb" style="width:90px;height:90px;top:340px;right:22%;animation-delay:-6s;"></div>
+
+      <div class="eyebrow"><span class="dot"></span> LIVE ON REDPANDA STREAMS · MULTI-AGENT · ML-NATIVE</div>
+      <h1>Price the deal before<br/>the market <span class="grad">finishes blinking.</span></h1>
+      <p class="lead">
+        SYNDIQUA ingests every institutional indication of interest, macro print, and secondary
+        spread tick — then runs a cross-checking <b style="color:var(--cyan)">three-agent mesh</b> and
+        online-learned demand models to recommend the reoffer spread <b style="color:var(--green)">in seconds,
+        with a deterministic audit trail</b> your compliance team will actually love.
+      </p>
+      <div class="hero-ctas">
+        <a class="btn-primary" href="dashboard.html">Open Live Terminal</a>
+        <a class="btn-ghost" href="#how">See the machinery ↓</a>
+      </div>
+    </header>
+
+    <!-- ============ MARQUEE ============ -->
+    <div class="marquee-zone">
+      <div class="marquee">
+        <span>⟨ORDER BOOK⟩ <b>2,135mm</b> velocity <b>140/min</b></span>
+        <span>⟨GUIDANCE⟩ <b>115 → 102.5bps</b> in 3 rounds</span>
+        <span>⟨OSR MATRX⟩ <b>5× book → −18bps</b></span>
+        <span>⟨P(TIGHTEN)⟩ <b>84%</b> window 30s</span>
+        <span>⟨CHURN RISK⟩ <b>18%</b> fast money</span>
+        <span>⟨AUDIT⟩ <b>100%</b> deterministic replay</span>
+        <!-- duplicate for seamless loop -->
+        <span>⟨ORDER BOOK⟩ <b>2,135mm</b> velocity <b>140/min</b></span>
+        <span>⟨GUIDANCE⟩ <b>115 → 102.5bps</b> in 3 rounds</span>
+        <span>⟨OSR MATRX⟩ <b>5× book → −18bps</b></span>
+        <span>⟨P(TIGHTEN)⟩ <b>84%</b> window 30s</span>
+        <span>⟨CHURN RISK⟩ <b>18%</b> fast money</span>
+        <span>⟨AUDIT⟩ <b>100%</b> deterministic replay</span>
+      </div>
+    </div>
+
+    <!-- ============ HOW ============ -->
+    <section id="how">
+      <div class="sec-head reveal">
+        <div class="kicker">THE MACHINERY</div>
+        <h2>From raw IOI to cleared price in four hops</h2>
+        <p>Every layer streams. Every decision is cross-checked. Nothing reaches the street before a licensed bookrunner signs it.</p>
+      </div>
+      <div class="flow">
+        <div class="fnode reveal" style="--accent:#22d3ee; animation-delay:.0s">
+          <div class="pulse-line"></div><div class="icon">📡</div>
+          <h3>Ingest</h3>
+          <p>FIX-tagged IOIs, secondary spreads, macro surprises — all on Redpanda topics with per-tranche ordering keys.</p>
+        </div>
+        <div class="fnode reveal" style="--accent:#6366f1; animation-delay:.15s">
+          <div class="pulse-line"></div><div class="icon">⚙️</div>
+          <h3>Aggregate</h3>
+          <p>Rolling book state: velocity, investor mix, OSR, best/worst limits. At-least-once with idempotent folds.</p>
+        </div>
+        <div class="fnode reveal" style="--accent:#a78bfa; animation-delay:.3s">
+          <div class="pulse-line"></div><div class="icon">🤖</div>
+          <h3>Deliberate</h3>
+          <p>Three specialist agents argue — intelligence, demand, risk — inside a bounded LangGraph revision loop.</p>
+        </div>
+        <div class="fnode reveal" style="--accent:#34d399; animation-delay:.45s">
+          <div class="pulse-line"></div><div class="icon">⚡</div>
+          <h3>Price</h3>
+          <p>Spread matrix + YTM + tranche waterfall resolve to one number, one confidence, one audit log.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AGENTS ============ -->
+    <section id="agents">
+      <div class="sec-head reveal">
+        <div class="kicker">AGENT MESH</div>
+        <h2>Three agents. One veto. Zero hallucinated spreads.</h2>
+      </div>
+      <div class="mesh-zone">
+        <div class="mesh-stage reveal">
+          <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+          <div class="ping" style="left:50%;top:50%;--accent:#22d3ee;"></div>
+          <div class="core"><div><div class="t">PRICING<br/>CONSENSUS</div><div class="s">LangGraph state machine</div></div></div>
+          <div class="agent-node an1" style="left:34%;top:6%"><div class="nm">Market Intelligence</div><div class="rl">Secondary comps + macro overlay → fair-value spread</div><div class="bar"></div></div>
+          <div class="agent-node an2" style="left:2%;top:44%"><div class="nm">Demand Forecaster</div><div class="rl">Book velocity & investor stickiness → net demand</div><div class="bar"></div></div>
+          <div class="agent-node an3" style="left:30%;top:82%"><div class="nm">Syndicate Bookrunner</div><div class="rl">Left-tail stress, warehouse limits, final veto</div><div class="bar"></div></div>
+        </div>
+        <div class="mesh-copy reveal">
+          <ul>
+            <li><div class="ic">🛡️</div><div><b>Adversarial by design</b><span>The bookrunner can reject both other agents and force a revision round — up to a hard cap, with a tightening circuit breaker between rounds.</span></div></li>
+            <li><div class="ic">📐</div><div><b>Deterministic core</b><span>The default reasoning provider is rule-based and pure-Python: identical inputs produce byte-identical recommendations. LLM narrative is optional, never load-bearing.</span></div></li>
+            <li><div class="ic">🧾</div><div><b>Audit-first state</b><span>Every agent step appends to a structured audit log: fair-value walks, challenges, vetoes, final rationale. Replayable in post-trade review.</span></div></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ METRICS ============ -->
+    <section style="padding-top:20px">
+      <div class="metrics reveal">
+        <div class="metric"><div class="n grad2" id="m1">0×</div><div class="l">peak simulated OSR</div></div>
+        <div class="metric"><div class="n grad2" id="m2">0</div><div class="l">agents cross-checking</div></div>
+        <div class="metric"><div class="n grad2" id="m3">0</div><div class="l">bps bounded tighten / round</div></div>
+        <div class="metric"><div class="n grad2" id="m4">0%</div><div class="l">deterministic replay</div></div>
+      </div>
+    </section>
+
+    <!-- ============ ML ============ -->
+    <section id="ml">
+      <div class="sec-head reveal">
+        <div class="kicker">ML LAYER</div>
+        <h2>Train on your book. Serve anywhere. No GPU cathedral.</h2>
+        <p>Ridge demand regression + logistic tighten classifier, trained online or straight from <b>any CSV you hand it</b>. JSON artifacts, deterministic seeds, feature-set hashing.</p>
+      </div>
+      <div class="ml-zone">
+        <div class="reveal">
+          <ul style="list-style:none;display:grid;gap:18px">
+            <li style="background:rgba(13,21,38,.55);border:1px solid var(--line);border-radius:14px;padding:18px 20px"><b>📊 CSV → deployed model in one command</b><br/><span style="color:var(--muted);font-size:13px">Point it at your archived deal book with any column names; median-impute, min-max scale, one-hot, train, ship.</span></li>
+            <li style="background:rgba(13,21,38,.55);border:1px solid var(--line);border-radius:14px;padding:18px 20px"><b>🎯 Confidence blending</b><br/><span style="color:var(--muted);font-size:13px">Model weight grows with sample count against a transparent desk heuristic. No silent model supremacy.</span></li>
+            <li style="background:rgba(13,21,38,.55);border:1px solid var(--line);border-radius:14px;padding:18px 20px"><b>🧪 12 dedicated tests</b><br/><span style="color:var(--muted);font-size:13px">Feature vector schema, artifact round-trips, hash stability, missing-column failures — all pinned.</span></li>
+          </ul>
+        </div>
+        <div class="chart-card reveal">
+          <div style="font-size:12px;letter-spacing:2px;color:var(--muted);margin-bottom:14px">TRAIN FROM ANY CSV</div>
+          <div class="eq">python -m dcm_engine.ml.train deals.csv ^<br/>  --features velocity,osr,fast_share ^<br/>  --target demand_mm ^<br/>  --label tightened</div>
+          <div class="pill-row">
+            <span class="pill on">ridge demand</span><span class="pill on">logistic tighten</span>
+            <span class="pill">median impute</span><span class="pill">min-max scale</span>
+            <span class="pill">JSON artifacts</span><span class="pill">no pickle</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SECURITY ============ -->
+    <section id="security">
+      <div class="sec-head reveal">
+        <div class="kicker">CONTROL PLANE</div>
+        <h2>Institutional guardrails, not vibes</h2>
+      </div>
+      <div class="sec-grid">
+        <div class="sec-card reveal"><div class="ic">🔐</div><b>Human approval gate</b><span>POST /api/approve records who signed off at which spread. Nothing publishes without it.</span></div>
+        <div class="sec-card reveal"><div class="ic">🧱</div><b>Hardened runtime</b><span>Distroless non-root images, read-only rootfs, dropped capabilities, default-deny NetworkPolicy.</span></div>
+        <div class="sec-card reveal"><div class="ic">🔍</div><b>Trivy gate in CI</b><span>Every push builds the container, scans HIGH/CRITICAL vulnerabilities, and fails the gate before GHCR.</span></div>
+      </div>
+    </section>
+
+    <!-- ============ CTA ============ -->
+    <section style="padding-top:10px">
+      <div class="cta reveal">
+        <h2>Your next benchmark deal starts in <span style="background:linear-gradient(100deg,#22d3ee,#34d399);-webkit-background-clip:text;background-clip:text;color:transparent">seconds, not spreadsheets.</span></h2>
+        <p>Open the terminal, watch the book build, and approve the level the mesh recommends.</p>
+        <a class="btn-primary" href="dashboard.html">Launch the Terminal →</a>
+      </div>
+      <footer>
+        SYNDIQUA · Autonomous DCM Syndicate Engine — simulated institutional data · <a href="https://github.com">GitHub</a> · <a href="dashboard.html">Terminal</a>
+      </footer>
+    </section>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+  // ---------- Starfield ----------
+  const starsEl = document.getElementById("stars");
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < 110; i++) {
+    const s = document.createElement("i");
+    s.style.left = Math.random() * 100 + "%";
+    s.style.top = Math.random() * 100 + "%";
+    s.style.animationDelay = Math.random() * 4 + "s";
+    s.style.width = s.style.height = (Math.random() * 1.6 + 0.6) + "px";
+    frag.appendChild(s);
+  }
+  starsEl.appendChild(frag);
+
+  // ---------- Scroll reveal ----------
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add("in"); });
+  }, { threshold: 0.16 });
+  document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+
+  // ---------- Metric count-up ----------
+  const ease = t => 1 - Math.pow(1 - t, 3);
+  function countUp(el, target, suffix, decimals) {
+    let t0 = null;
+    function frame(ts) {
+      if (!t0) t0 = ts;
+      const p = Math.min((ts - t0) / 1600, 1);
+      el.textContent = (target * ease(p)).toFixed(decimals) + suffix;
+      if (p < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+  const io2 = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const id = e.target.id;
+      if (id === "m1") countUp(e.target, 6.2, "×", 1);
+      if (id === "m2") countUp(e.target, 3, "", 0);
+      if (id === "m3") countUp(e.target, 12, "", 0);
+      if (id === "m4") countUp(e.target, 100, "%", 0);
+      io2.unobserve(e.target);
+    });
+  }, { threshold: 0.5 });
+  ["m1", "m2", "m3", "m4"].forEach(id => io2.observe(document.getElementById(id)));
+
+  // ---------- Nav CTA: if served by the API, dashboard is same-origin ----------
+  // Static GH Pages deploy links to dashboard.html directly; both work.
+})();
+</script>
+</body>
+</html>

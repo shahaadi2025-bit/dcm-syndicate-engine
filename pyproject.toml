@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dcm-syndicate-engine"
+version = "1.0.0"
+description = "Autonomous Sovereign & Corporate Debt Capital Markets (DCM) Syndicate Pricing & Bookbuilding Engine"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Syndicate Technology" }]
+dependencies = [
+    "typing-extensions>=4.12",
+]
+
+[project.optional-dependencies]
+streaming = [
+    "confluent-kafka>=2.5,<3",
+]
+api = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]
+agents = [
+    "langgraph>=0.2,<0.3",
+    "langchain-core>=0.3,<0.4",
+]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.11",
+    "ruff>=0.6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["dcm_engine"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_unused_ignores = true
+disallow_untyped_defs = false

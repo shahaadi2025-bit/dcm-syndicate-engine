@@ -1,0 +1,21 @@
+# Render Blueprints (render.yaml) - free-tier deployable backend + static frontend.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: dcm-syndicate-api
+    runtime: python
+    plan: free
+    rootDir: ./
+    buildCommand: pip install -e ".[streaming,agents]" && pip install fastapi "uvicorn[standard]" && python -m dcm_engine.ml.train data/sample_deals.csv --features velocity_per_min,ordered_mm,target_mm,fast_money_share,anchor_share,hours_open --target demand_mm --label tightened
+    startCommand: python -m dcm_engine.bridge.app
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DCM_PORT
+        value: 10000
+      - key: DCM_LLM_PROVIDER
+        value: rule
+      # Optional: attach a Kafka/Redpanda feed later (Upstash/Confluent Cloud free tiers)
+      - key: DCM_KAFKA_BOOTSTRAP
+        sync: false
