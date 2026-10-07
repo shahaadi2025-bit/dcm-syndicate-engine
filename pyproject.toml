@@ -51,5 +51,14 @@ warn_unused_ignores = true
 disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
-module = ["langchain_openai", "confluent_kafka.serialization"]
+# Optional extras: typecheck cleanly even when an extra isn't installed
+# (e.g. CI installs [dev,streaming,agents] but not [api]).
+module = [
+    "langchain_openai",
+    "confluent_kafka.serialization",
+    "fastapi",
+    "fastapi.*",
+    "uvicorn",
+    "uvicorn.*",
+]
 ignore_missing_imports = true
