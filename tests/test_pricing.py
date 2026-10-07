@@ -6,7 +6,6 @@ import pytest
 
 from dcm_engine.core.models import InvestorType
 from dcm_engine.core.pricing import (
-    DEFAULT_SPREAD_MATRIX,
     adjusted_guidance_spread_bps,
     bond_price_from_yield,
     interpolate_benchmark_yield,

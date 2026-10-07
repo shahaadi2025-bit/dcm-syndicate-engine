@@ -257,7 +257,7 @@ def run_producer(
 
     logger.info(
         "streaming IOIs -> %s @ %.0f/s for %.0fs (deal=%s tranche=%s)",
-        topic if (topic := Topics.IOI_BIDS) else topic,
+        Topics.IOI_BIDS.value,
         rate_per_sec,
         duration_sec,
         deal_id,

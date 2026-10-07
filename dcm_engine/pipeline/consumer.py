@@ -17,12 +17,13 @@ from __future__ import annotations
 
 import json
 import logging
+import signal
 import socket
 import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from confluent_kafka import Consumer, KafkaError, Producer
+from confluent_kafka import Consumer, KafkaError, KafkaException, Producer, TopicPartition
 
 from dcm_engine.core.models import BookState, InvestorType, utc_now
 from dcm_engine.pipeline.topics import EventType, Topics
@@ -235,16 +236,20 @@ def run_consumer(
             if msg is None:
                 continue
             if msg.error():
-                if msg.error().code() == KafkaError._PARTITION_EOF:
+                err = msg.error()
+                if err is not None and err.code() == KafkaError._PARTITION_EOF:
                     continue
-                raise KafkaException(msg.error())
+                raise KafkaException(err)
 
             key: str | None = None
+            raw_value = msg.value()
+            if raw_value is None:
+                continue
             try:
-                key = fold_event(books, msg.value())
+                key = fold_event(books, raw_value)
             except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
                 logger.warning("poison message: %s", exc)
-                send_to_dlq(snapshot_producer, msg.value(), str(exc))
+                send_to_dlq(snapshot_producer, raw_value, str(exc))
 
             if key is not None:
                 processed += 1
@@ -268,10 +273,12 @@ def run_consumer(
 
             # Commit only after the fold is complete: at-least-once semantics
             # with idempotent aggregation (fold is additive per event ts).
-            consumer.store_offsets(offsets=[(msg.topic(), msg.partition(), msg.offset() + 1)])
-            consumer.commit(asynchronous=True, offsets=[
-                (msg.topic(), msg.partition(), msg.offset() + 1)
-            ])
+            topic, partition, offset = msg.topic(), msg.partition(), msg.offset()
+            if topic is None or partition is None or offset is None:  # tombstone guard
+                continue
+            tp = TopicPartition(topic, partition, offset + 1)
+            consumer.store_offsets(offsets=[tp])
+            consumer.commit(asynchronous=True, offsets=[tp])
 
             if max_messages is not None and processed >= max_messages:
                 logger.info("max_messages reached - exiting")

@@ -13,8 +13,8 @@ Conventions
 from __future__ import annotations
 
 from bisect import bisect_right
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 from dcm_engine.core.models import InvestorType
 
@@ -54,7 +54,7 @@ def bond_price_from_yield(
     if ytm <= 0:
         raise ValueError(f"ytm must be positive, got {ytm}")
 
-    n = int(round(years * freq))
+    n = round(years * freq)
     if n <= 0:
         raise ValueError(f"years*freq must produce at least one coupon, got {years}")
 

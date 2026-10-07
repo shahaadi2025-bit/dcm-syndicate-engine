@@ -48,8 +48,8 @@ def _load_trained_demand_model() -> ModelArtifact | None:
                 art = ModelArtifact.from_json(cand.read_text(encoding="utf-8"))
                 logger.info("loaded trained demand model from %s", cand)
                 return art
-            except Exception:
-                logger.warning("failed to load demand artifact %s", cand)
+            except (ValueError, KeyError, OSError) as load_err:
+                logger.warning("failed to load demand artifact %s: %s", cand, load_err)
     return None
 
 logger = logging.getLogger(__name__)
@@ -100,8 +100,8 @@ def _try_kafka_snapshots() -> dict[str, Any] | None:
                 try:
                     d = _json.loads(msg.value())
                     snaps.append((d["tranche_id"], d))
-                except Exception:
-                    pass
+                except (KeyError, TypeError, ValueError, _json.JSONDecodeError) as parse_err:
+                    logger.debug("skipping malformed snapshot: %s", parse_err)
 
         c.assign(parts)
         deadline = time.time() + 1.5
@@ -119,6 +119,9 @@ def _try_kafka_snapshots() -> dict[str, Any] | None:
     except Exception as exc:  # Kafka down / topic missing -> fall back
         logger.warning("kafka snapshot fetch failed, using simulator: %s", exc)
         return None
+
+
+# ruff: noqa: BLE001 - module boundary: any Kafka/serde failure must degrade to the simulator
 
 
 # ---------------------------------------------------------------------------
@@ -297,11 +300,12 @@ class LiveBookEngine:
 
 
 # Packaged singleton (FastAPI app imports this).
+_ENGINE: LiveBookEngine | None = None
+
+
 def get_engine() -> LiveBookEngine:
     """Return the process-wide engine (created once)."""
     global _ENGINE
-    try:
-        return _ENGINE  # type: ignore[name-defined]
-    except NameError:
+    if _ENGINE is None:
         _ENGINE = LiveBookEngine()
-        return _ENGINE
+    return _ENGINE

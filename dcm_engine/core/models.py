@@ -7,15 +7,16 @@ Keep them dependency-free so they import anywhere.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Mapping
+from typing import Any
 
 
 def utc_now() -> datetime:
     """Timezone-aware UTC now (naive datetimes are a production bug source)."""
-    return datetime.now(tz=timezone.utc)
+    return datetime.now(tz=UTC)
 
 
 class InvestorType(str, Enum):

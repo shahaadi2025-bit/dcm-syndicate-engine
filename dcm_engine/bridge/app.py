@@ -123,8 +123,8 @@ async def ws_endpoint(websocket: WebSocket) -> None:
         logger.exception("ws handler error")
         try:
             await websocket.close(code=1011)
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001 - client already gone; nothing to do
+            logger.debug("websocket close after error also failed")
 
 
 @app.get("/", response_class=HTMLResponse)

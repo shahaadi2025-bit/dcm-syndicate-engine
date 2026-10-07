@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 
+from dcm_engine.core.models import InvestorType
 from dcm_engine.pipeline.consumer import _TrancheBook, fold_event
 from dcm_engine.pipeline.producer import IOISimulator, envelope
 from dcm_engine.pipeline.topics import EventType
-from dcm_engine.core.models import InvestorType
 
 
 class TestIOISimulator:

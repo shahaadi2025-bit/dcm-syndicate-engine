@@ -28,15 +28,15 @@ class TestFeatures:
         assert len(_features()) == NUM_FEATURES
 
     def test_deterministic(self) -> None:
-        kwargs = dict(
-            velocity_per_min=60.0,
-            ordered_mm=2500.0,
-            target_mm=1000.0,
-            by_investor_type_mm={"REAL_MONEY": 2000.0},
-            guidance_spread_bps=115.0,
-            current_spread_bps=110.0,
-            hours_open=3.0,
-        )
+        kwargs = {
+            "velocity_per_min": 60.0,
+            "ordered_mm": 2500.0,
+            "target_mm": 1000.0,
+            "by_investor_type_mm": {"REAL_MONEY": 2000.0},
+            "guidance_spread_bps": 115.0,
+            "current_spread_bps": 110.0,
+            "hours_open": 3.0,
+        }
         assert build_feature_vector(**kwargs) == build_feature_vector(**kwargs)
 
     def test_zero_target_no_crash(self) -> None:

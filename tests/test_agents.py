@@ -9,7 +9,6 @@ from dcm_engine.agents.graph import (
 )
 from dcm_engine.agents.llm import RuleBasedProvider
 from dcm_engine.core.models import (
-    InvestorType,
     MacroPrint,
     SecondarySpreadTick,
     Tranche,
@@ -106,15 +105,15 @@ def test_graph_compiles_and_is_acyclic_termination() -> None:
 
 def test_deterministic_with_rule_provider() -> None:
     """Same inputs + deterministic provider => identical recommendation."""
-    kwargs = dict(
-        tranche=_tranche(),
-        spread_ticks=_ticks(),
-        macro_prints=_macros(),
-        ordered_mm=3000.0,
-        by_investor_type_mm={"REAL_MONEY": 2500.0, "HEDGE_FUND": 500.0},
-        velocity_per_min=40.0,
-        provider=RuleBasedProvider(),
-    )
+    kwargs = {
+        "tranche": _tranche(),
+        "spread_ticks": _ticks(),
+        "macro_prints": _macros(),
+        "ordered_mm": 3000.0,
+        "by_investor_type_mm": {"REAL_MONEY": 2500.0, "HEDGE_FUND": 500.0},
+        "velocity_per_min": 40.0,
+        "provider": RuleBasedProvider(),
+    }
     rec_a = run_pricing_decision(**kwargs)
     rec_b = run_pricing_decision(**kwargs)
     assert rec_a.final_spread_bps == rec_b.final_spread_bps

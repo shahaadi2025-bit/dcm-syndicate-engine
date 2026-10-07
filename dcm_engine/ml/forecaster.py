@@ -30,8 +30,6 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
-from dcm_engine.core.models import InvestorType
-
 logger = logging.getLogger(__name__)
 
 FEATURE_SET_VERSION = "fs-2026.10-v1"

@@ -31,9 +31,7 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
-import json
 import logging
-import math
 import os
 import sys
 from pathlib import Path
@@ -87,9 +85,7 @@ def load_csv(
         if missing:
             raise ValueError(f"columns not in CSV: {missing}")
         # Pass 1: collect means/medians and raw values.
-        raw: list[dict[str, str]] = []
-        for row in reader:
-            raw.append(row)
+        raw: list[dict[str, str]] = list(reader)
     if not raw:
         raise ValueError("CSV has no data rows")
 
@@ -162,8 +158,9 @@ def train_from_csv(
     """Train both models from a CSV. Returns {"demand": ..., "tighten": ...}."""
     X, y_d, y_l, prep = load_csv(path, feature_cols, target_col, label_col)
     out: dict[str, ModelArtifact | None] = {}
+    demand_art: ModelArtifact | None
     w, b = _NumpyFallback.train_ridge(X, y_d, l2=1.0, epochs=600)
-    out["demand"] = ModelArtifact(
+    demand_art = ModelArtifact(
         model_type="ridge_demand_csv",
         feature_set=feature_set_hash(feature_cols),
         weights=w,
@@ -175,6 +172,7 @@ def train_from_csv(
             "preprocessing": prep,
         },
     )
+    out["demand"] = demand_art
     if label_col and len(set(y_l)) > 1:
         wl, bl = _NumpyFallback.train_logistic(X, [float(v) for v in y_l], l2=1.0)
         out["tighten"] = ModelArtifact(
@@ -194,10 +192,12 @@ def train_from_csv(
 def save_artifacts(arts: dict[str, ModelArtifact | None], outdir: Path = ARTIFACT_DIR) -> None:
     """Persist artifacts as JSON files the bridge auto-loads."""
     outdir.mkdir(parents=True, exist_ok=True)
-    if arts.get("demand"):
-        (outdir / "demand_model.json").write_text(arts["demand"].to_json(), encoding="utf-8")
-    if arts.get("tighten"):
-        (outdir / "tighten_model.json").write_text(arts["tighten"].to_json(), encoding="utf-8")
+    demand_art = arts.get("demand")
+    tighten_art = arts.get("tighten")
+    if demand_art is not None:
+        (outdir / "demand_model.json").write_text(demand_art.to_json(), encoding="utf-8")
+    if tighten_art is not None:
+        (outdir / "tighten_model.json").write_text(tighten_art.to_json(), encoding="utf-8")
     logger.info("artifacts written to %s", outdir)
 
 

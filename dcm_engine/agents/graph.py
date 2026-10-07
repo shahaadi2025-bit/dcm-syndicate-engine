@@ -38,7 +38,6 @@ from dcm_engine.core.models import (
     TrancheRecommendation,
 )
 from dcm_engine.core.pricing import (
-    adjusted_guidance_spread_bps,
     bond_price_from_yield,
     interpolate_benchmark_yield,
     matrix_spread_adjustment_bps,
