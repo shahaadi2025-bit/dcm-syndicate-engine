@@ -40,7 +40,7 @@ jobs:
         run: pytest -q --tb=short
 
   e2e:
-    name: End-to-end: Redpanda -> producer -> consumer -> agent mesh
+    name: "End-to-end: Redpanda -> producer -> consumer -> agent mesh"
     runs-on: ubuntu-latest
     needs: quality
     steps:
