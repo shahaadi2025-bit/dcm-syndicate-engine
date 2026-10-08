@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import signal
 import socket
 import time
@@ -299,4 +300,8 @@ def run_consumer(
 
 
 if __name__ == "__main__":
-    run_consumer()
+    _max_messages = os.environ.get("DCM_CONSUMER_MAX_MESSAGES")
+    run_consumer(
+        os.environ.get("DCM_KAFKA_BOOTSTRAP", BOOTSTRAP_DEFAULT),
+        max_messages=int(_max_messages) if _max_messages else None,
+    )

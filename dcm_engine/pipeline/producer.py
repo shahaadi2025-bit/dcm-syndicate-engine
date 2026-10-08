@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import random
 import socket
 import time
@@ -297,4 +298,8 @@ def run_producer(
 
 
 if __name__ == "__main__":
-    run_producer()
+    run_producer(
+        bootstrap_servers=os.environ.get("DCM_KAFKA_BOOTSTRAP", BOOTSTRAP_DEFAULT),
+        rate_per_sec=float(os.environ.get("DCM_PRODUCER_RATE", "500")),
+        duration_sec=float(os.environ.get("DCM_PRODUCER_DURATION", "60")),
+    )

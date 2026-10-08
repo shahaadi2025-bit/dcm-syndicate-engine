@@ -55,6 +55,7 @@ def _load_trained_demand_model() -> ModelArtifact | None:
 logger = logging.getLogger(__name__)
 
 RECOMMENDATION_TTL_SECONDS = 30.0
+KAFKA_SNAPSHOT_TTL_SECONDS = 10.0
 
 # ---------------------------------------------------------------------------
 # Optional Kafka snapshot ingestion (enabled with DCM_KAFKA_BOOTSTRAP)
@@ -206,6 +207,54 @@ class LiveBookEngine:
         self._last_recommendation: TrancheRecommendation | None = None
         self._last_computed_at: float = 0.0
         self._demand_artifact = _load_trained_demand_model()
+        self._kafka_snapshot: dict[str, Any] | None = None
+        self._kafka_fetch_ts: float = 0.0
+
+    def _maybe_refresh_kafka_snapshot(self) -> None:
+        """TTL-gated pull of the freshest broker book snapshot.
+
+        No-op unless DCM_KAFKA_BOOTSTRAP is set. Rate-limited so the
+        short-lived consumer never runs more than once per TTL window.
+        Callers hold the engine lock: the ~2s Kafka probe pauses WS ticks
+        briefly, at most once per window.
+        """
+        if not os.environ.get("DCM_KAFKA_BOOTSTRAP", "").strip():
+            return
+        now = time.time()
+        if now - self._kafka_fetch_ts < KAFKA_SNAPSHOT_TTL_SECONDS:
+            return
+        self._kafka_fetch_ts = now
+        snap = _try_kafka_snapshots()
+        if snap is not None:
+            self._kafka_snapshot = snap
+
+    def _apply_kafka_snapshot(self) -> bool:
+        """Overlay the latest Kafka book snapshot onto served state.
+
+        Returns True when served data comes from the streaming pipeline
+        (book_source='kafka'); False keeps the deterministic simulator.
+        """
+        snap = self._kafka_snapshot
+        if not snap:
+            return False
+        if str(snap.get("tranche_id")) != self.state.tranche.tranche_id:
+            return False
+        by_type: dict[str, Any] = snap.get("by_investor_type_mm") or {}
+        bench = self.state.tranche.benchmark_yield
+        best = float(snap.get("best_limit_yield") or 0.0)
+        limit = best if best > 0 else bench + 0.0100
+        self.state.book = {
+            str(inv_type): {
+                "investor_id": f"KAFKA-{inv_type}",
+                "investor_type": str(inv_type),
+                "size_mm": float(mm),
+                "limit_yield": round(limit, 6),
+            }
+            for inv_type, mm in by_type.items()
+            if float(mm) > 0
+        }
+        self.state.velocity = float(snap.get("velocity_per_min") or 0.0)
+        return True
 
     @property
     def model_info(self) -> dict[str, Any]:
@@ -248,7 +297,10 @@ class LiveBookEngine:
         Returns a JSON-safe payload consumed by both REST and WS handlers.
         """
         with self._lock:
-            self.state.step()
+            self._maybe_refresh_kafka_snapshot()
+            kafka_applied = self._apply_kafka_snapshot()
+            if not kafka_applied:
+                self.state.step()
             agg = self._aggregate()
             now = time.time()
             if self._should_recompute(now):
@@ -278,11 +330,13 @@ class LiveBookEngine:
                 else 0.0,
                 "recommendation": rec.to_dict() if rec else None,
                 "server_time": now,
+                "book_source": "kafka" if kafka_applied else "simulated",
             }
 
     def current(self) -> dict[str, Any]:
         """Snapshot without advancing the sim (for REST GETs)."""
         with self._lock:
+            kafka_applied = self._apply_kafka_snapshot()
             agg = self._aggregate()
             rec = self._last_recommendation
             return {
@@ -296,6 +350,7 @@ class LiveBookEngine:
                 else 0.0,
                 "recommendation": rec.to_dict() if rec else None,
                 "server_time": time.time(),
+                "book_source": "kafka" if kafka_applied else "simulated",
             }
 
 
