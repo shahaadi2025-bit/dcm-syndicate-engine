@@ -94,8 +94,8 @@ jobs:
         env:
           DCM_KAFKA_BOOTSTRAP: 127.0.0.1:9092
 
-      - name: Validate k8s manifest (client-side dry-run)
-        run: kubectl create --dry-run=client --validate=false -f deploy/deployment.yaml -o yaml > /dev/null
+      - name: Validate k8s manifests (structural, offline)
+        run: python scripts/validate_manifests.py
 
   container-build:
     name: Build & scan container image
