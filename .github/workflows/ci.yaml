@@ -74,10 +74,25 @@ jobs:
           docker exec redpanda rpk topic create dcm.ioi.bids.v1 -p 3
           docker exec redpanda rpk topic create dcm.book.snapshots.v1 -p 3
 
+      - name: Wait for broker reachability from host (IPv4)
+        run: |
+          python - <<'EOF'
+          import socket, sys, time
+          for _ in range(30):
+              try:
+                  socket.create_connection(("127.0.0.1", 9092), timeout=2).close()
+                  print("broker reachable on 127.0.0.1:9092")
+                  sys.exit(0)
+              except OSError:
+                  time.sleep(2)
+          print("broker unreachable from host")
+          sys.exit(1)
+          EOF
+
       - name: Run end-to-end pipeline (IOIs -> book -> agent mesh -> recommendation)
         run: python scripts/e2e_kafka.py
         env:
-          DCM_KAFKA_BOOTSTRAP: localhost:9092
+          DCM_KAFKA_BOOTSTRAP: 127.0.0.1:9092
 
       - name: Validate k8s manifest (client-side dry-run)
         run: kubectl create --dry-run=client -f deploy/deployment.yaml -o yaml > /dev/null

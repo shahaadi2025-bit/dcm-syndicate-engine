@@ -1,6 +1,6 @@
 # Multi-stage production image for the DCM syndicate engine.
-# Stage 1 builds wheels; stage 2 ships a distroless runtime so the
-# attack surface is minimal and the container runs non-root.
+# Stage 1 builds the wheel; stage 2 ships an upgraded slim runtime,
+# patched against known OS CVEs and running as non-root.
 
 FROM python:3.11-slim AS builder
 
@@ -12,19 +12,20 @@ RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir build \
     && python -m build --wheel --outdir /wheels
 
-FROM gcr.io/distroless/python3-debian12:nonroot
+FROM python:3.11-slim
 
-# Distroless Python images need packages installed site-wide; copy the
-# wheel and its dependencies from the builder virtualenv instead.
-COPY --from=builder /wheels /wheels
+# Patch OS packages: the slim base ships stale point releases that fail
+# the Trivy HIGH/CRITICAL gate (libexpat1 et al).
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# NOTE: In production, bake dependencies at build time into a venv layer.
-# Here we keep the image minimal and document the install path.
 WORKDIR /app
 COPY --from=builder /wheels /app/wheels
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-# Distroless nonroot already runs as uid 65532; no USER directive needed.
+# Run non-root (same uid as the distroless nonroot image).
+USER 65532:65532
+
 CMD ["python", "-c", "print('dcm-engine image: run a module entrypoint')"]
