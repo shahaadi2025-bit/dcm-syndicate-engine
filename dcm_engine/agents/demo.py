@@ -62,7 +62,8 @@ def main() -> None:
     print(f"Final yield    : {rec.final_yield:.4%}")
     print(f"Final price    : {rec.final_price:.3f}")
     print(f"Forecast demand: {rec.forecast_demand_mm:,.1f}mm  "
-          f"(OSR {rec.oversubscription_ratio:.2f}x)")
+          f"(headline OSR {rec.oversubscription_ratio:.2f}x = forecast / target)")
+    print("-" * 72)
     print(f"Confidence     : {rec.confidence:.2f}")
     print(f"Revised        : {rec.revised}")
     print("-" * 72)

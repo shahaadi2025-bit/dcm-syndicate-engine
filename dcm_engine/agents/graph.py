@@ -250,7 +250,9 @@ def bookrunner_agent(state: AgentState) -> dict[str, Any]:
     weighted_mm = float(forecast.get("weighted_mm", state.ordered_mm))
 
     # Effective OSR blends raw and churn-discounted demand: a 3x book made
-    # of flippers is economically a 2x book.
+    # of flippers is economically a 2x book. This bookrunner-level blend is a
+    # risk signal (shows in the rationale) and differs from the headline
+    # forecast OSR (forecast demand / target) reported on the recommendation.
     raw_osr = (
         oversubscription_ratio(state.ordered_mm, tranche.target_size_mm)
         if state.ordered_mm > 0 and tranche.target_size_mm > 0

@@ -23,7 +23,10 @@ api = [
     "uvicorn[standard]>=0.30",
 ]
 agents = [
-    "langgraph>=0.2,<0.3",
+    # Pinned: langgraph 0.2.x carries langgraph.prebuilt in-core; the separate
+    # langgraph-prebuilt 1.1.0 wheel assumes langgraph>=1.x and breaks installs
+    # if left unbounded in the environment.
+    "langgraph>=0.2.76,<0.3",
     "langchain-core>=0.3,<0.4",
 ]
 dev = [
