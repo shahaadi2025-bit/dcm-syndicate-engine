@@ -14,10 +14,12 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 FROM python:3.11-slim
 
-# Patch OS packages: the slim base ships stale point releases that fail
-# the Trivy HIGH/CRITICAL gate (libexpat1 et al).
+# Patch OS packages and strip build tooling: the slim base ships stale
+# point releases and vendored build tools (wheel, jaraco.context) that
+# fail the Trivy HIGH/CRITICAL gate. None are needed at runtime.
 RUN apt-get update && apt-get upgrade -y \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && pip uninstall --yes pip setuptools wheel
 
 WORKDIR /app
 COPY --from=builder /wheels /app/wheels
